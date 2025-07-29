@@ -64,7 +64,7 @@ class Localizer:
 
             return yaw
 
-        yaw = convert_azimuth_to_yaw(azimuth_correction)
+        yaw = convert_azimuth_to_yaw(math.radians(msg.azimuth)-azimuth_correction)
 
         # Convert yaw to quaternion
         x, y, z, w = quaternion_from_euler(0, 0, yaw)
@@ -87,6 +87,19 @@ class Localizer:
         current_velocity_msg.header.frame_id = 'base_link'
         current_velocity_msg.twist.linear.x = msg.east_velocity
         self.current_velocity_pub.publish(current_velocity_msg)
+
+        # create a transform message
+        t = TransformStamped()
+
+        # fill in the transform message - t
+        t.header.frame_id = 'map'
+        t.child_frame_id = 'base_link'
+        t.transform.translation = current_pose_msg.pose.position
+        t.transform.rotation = orientation
+
+        # publish transform
+        self.br.sendTransform(t)
+
 
     def run(self):
         rospy.spin()
