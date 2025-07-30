@@ -64,7 +64,7 @@ class Localizer:
 
             return yaw
 
-        yaw = convert_azimuth_to_yaw(math.radians(msg.azimuth)-azimuth_correction)
+        yaw = convert_azimuth_to_yaw(math.radians(msg.azimuth)-math.radians(azimuth_correction))
 
         # Convert yaw to quaternion
         x, y, z, w = quaternion_from_euler(0, 0, yaw)
