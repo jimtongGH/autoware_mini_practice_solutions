@@ -111,12 +111,19 @@ class Lanelet2GlobalPlanner:
         self.waypoints_pub.publish(path)
 
     def empty_publish_path(self):
+        # stop the vehicle
+        vehicle_cmd = VehicleCmd()
+        vehicle_cmd.ctrl_cmd.steering_angle = 0.0
+        vehicle_cmd.ctrl_cmd.linear_velocity = 0.0
+        self.vehicle_cmd_pub.publish(vehicle_cmd)
+
         path = Path()
         path.header.stamp = rospy.Time.now()
         path.header.frame_id = self.output_frame
         path.waypoints = []
         self.waypoints_pub.publish(path)
-        self.publish_stop_command()
+
+
 
     def current_pose_callback(self, msg):
         self.current_location = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
@@ -124,14 +131,11 @@ class Lanelet2GlobalPlanner:
             distance = math.hypot(self.goal_point.x - self.current_location.x,
                                   self.goal_point.y - self.current_location.y)
             if distance < self.distance_to_goal_limit:
-                rospy.loginfo("%s - goal reached, clear path", rospy.get_name())
-                self.empty_publish_path()
 
-    def publish_stop_command(self):
-        vehicle_cmd = VehicleCmd()
-        vehicle_cmd.ctrl_cmd.steering_angle = 0.0
-        vehicle_cmd.ctrl_cmd.linear_velocity = 0.0
-        self.vehicle_cmd_pub.publish(vehicle_cmd)
+                self.empty_publish_path()
+                rospy.loginfo("%s - goal reached, clear path", rospy.get_name())
+
+
 
 
     def run(self):
