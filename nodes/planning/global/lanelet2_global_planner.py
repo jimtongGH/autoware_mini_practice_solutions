@@ -13,7 +13,7 @@ from lanelet2.projection import UtmProjector
 from lanelet2.core import BasicPoint2d
 from lanelet2.geometry import findNearest
 
-from autoware_mini.msg import Waypoint, Path, VehicleCmd
+from autoware_mini.msg import Waypoint, Path
 from geometry_msgs.msg import PoseStamped
 
 class Lanelet2GlobalPlanner:
@@ -34,7 +34,6 @@ class Lanelet2GlobalPlanner:
 
         # Publishers
         self.waypoints_pub = rospy.Publisher('/planning/global_path', Path, queue_size=1, latch=True)
-        self.vehicle_cmd_pub = rospy.Publisher('/control/vehicle_cmd', VehicleCmd, queue_size=10)
 
         # Subscribers
         rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_point_callback, queue_size=1)
@@ -111,19 +110,11 @@ class Lanelet2GlobalPlanner:
         self.waypoints_pub.publish(path)
 
     def empty_publish_path(self):
-        # stop the vehicle
-        vehicle_cmd = VehicleCmd()
-        vehicle_cmd.ctrl_cmd.steering_angle = 0.0
-        vehicle_cmd.ctrl_cmd.linear_velocity = 0.0
-        self.vehicle_cmd_pub.publish(vehicle_cmd)
-
         path = Path()
         path.header.stamp = rospy.Time.now()
         path.header.frame_id = self.output_frame
         path.waypoints = []
         self.waypoints_pub.publish(path)
-
-
 
     def current_pose_callback(self, msg):
         self.current_location = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
@@ -135,12 +126,8 @@ class Lanelet2GlobalPlanner:
                 self.empty_publish_path()
                 rospy.loginfo("%s - goal reached, clear path", rospy.get_name())
 
-
-
-
     def run(self):
         rospy.spin()
-
 
 if __name__ == '__main__':
     rospy.init_node('lanelet2_global_planner')
