@@ -23,6 +23,7 @@ class Lanelet2GlobalPlanner:
         self.graph = None
         self.current_location = None
         self.goal_point = None
+        self.clear_point = False
         self.coordinate_transformer = rospy.get_param("/localization/coordinate_transformer")
         self.use_custom_origin = rospy.get_param("/localization/use_custom_origin")
         self.utm_origin_lat = rospy.get_param("/localization/utm_origin_lat")
@@ -31,6 +32,7 @@ class Lanelet2GlobalPlanner:
         self.speed_limit = rospy.get_param("~speed_limit", 40.0)
         self.output_frame = rospy.get_param("/planning/waypoint_loader/output_frame")
         self.distance_to_goal_limit = rospy.get_param("/planning/lanelet2_global_planner/distance_to_goal_limit")
+        self.graph = self.load_map_init()
 
         # Publishers
         self.waypoints_pub = rospy.Publisher('/planning/global_path', Path, queue_size=1, latch=True)
@@ -39,14 +41,7 @@ class Lanelet2GlobalPlanner:
         rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.goal_point_callback, queue_size=1)
         rospy.Subscriber('/localization/current_pose', PoseStamped, self.current_pose_callback, queue_size=10)
 
-    def goal_point_callback(self, msg):
-        self.goal_point = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
-        # loginfo message about receiving the goal point
-        rospy.loginfo("%s - goal position (%f, %f, %f) orientation (%f, %f, %f, %f) in %s frame", rospy.get_name(),
-                      msg.pose.position.x, msg.pose.position.y, msg.pose.position.z,
-                      msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z,
-                      msg.pose.orientation.w, msg.header.frame_id)
-
+    def load_map_init(self):
         # Load the map using Lanelet2
         if self.coordinate_transformer == "utm":
             projector = UtmProjector(Origin(self.utm_origin_lat, self.utm_origin_lon), self.use_custom_origin, False)
@@ -61,6 +56,26 @@ class Lanelet2GlobalPlanner:
                                                       lanelet2.traffic_rules.Participants.VehicleTaxi)
         # routing graph
         self.graph = lanelet2.routing.RoutingGraph(self.lanelet2_map, traffic_rules)
+
+        return self.graph
+
+    def empty_publish_path(self):
+        path = Path()
+        path.header.stamp = rospy.Time.now()
+        path.header.frame_id = self.output_frame
+        path.waypoints = []
+        self.waypoints_pub.publish(path)
+
+    def goal_point_callback(self, msg):
+        # resetting the status
+        self.clear_point = False
+
+        self.goal_point = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
+        # loginfo message about receiving the goal point
+        rospy.loginfo("%s - goal position (%f, %f, %f) orientation (%f, %f, %f, %f) in %s frame", rospy.get_name(),
+                      msg.pose.position.x, msg.pose.position.y, msg.pose.position.z,
+                      msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z,
+                      msg.pose.orientation.w, msg.header.frame_id)
 
         # get start and end lanelets
         start_lanelet = findNearest(self.lanelet2_map.laneletLayer, self.current_location, 1)[0][1]
@@ -109,21 +124,14 @@ class Lanelet2GlobalPlanner:
         path.waypoints = waypoints
         self.waypoints_pub.publish(path)
 
-    def empty_publish_path(self):
-        path = Path()
-        path.header.stamp = rospy.Time.now()
-        path.header.frame_id = self.output_frame
-        path.waypoints = []
-        self.waypoints_pub.publish(path)
-
     def current_pose_callback(self, msg):
         self.current_location = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
         if self.goal_point:
             distance = math.hypot(self.goal_point.x - self.current_location.x,
                                   self.goal_point.y - self.current_location.y)
-            if distance < self.distance_to_goal_limit:
-
+            if distance < self.distance_to_goal_limit and self.clear_point is not True:
                 self.empty_publish_path()
+                self.clear_point = True
                 rospy.loginfo("%s - goal reached, clear path", rospy.get_name())
 
     def run(self):

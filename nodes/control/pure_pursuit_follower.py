@@ -37,6 +37,8 @@ class PurePursuitFollower:
         prepare(path_linestring)
         self.path_linestring = path_linestring
 
+        self.end_track = False
+
         if msg.waypoints:
             # Create a distance-to-velocity interpolator for the path
             # collect waypoint x and y coordinates
