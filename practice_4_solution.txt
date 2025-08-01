@@ -1,0 +1,1 @@
+I changed the last point in the waypoint list. By setting the goal point as the last point in the waypoint list, the path is drawn in a right way.
