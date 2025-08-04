@@ -92,6 +92,7 @@ class Localizer:
         t = TransformStamped()
 
         # fill in the transform message - t
+        t.header.stamp = msg.header.stamp
         t.header.frame_id = 'map'
         t.child_frame_id = 'base_link'
         t.transform.translation = current_pose_msg.pose.position

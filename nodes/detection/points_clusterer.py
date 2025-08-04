@@ -19,11 +19,10 @@ class PointsClusterer:
         self.clusterer = DBSCAN(eps=self.cluster_epsilon, min_samples=self.cluster_min_size)
 
         # Publishers
-        self.points_pub = rospy.Publisher('points_clustered', PointCloud2, queue_size=1, tcp_nodelay=True)
+        self.cluster_msg_pub = rospy.Publisher('points_clustered', PointCloud2, queue_size=1, tcp_nodelay=True)
 
         # Subscribers
-        rospy.Subscriber('points_filtered', PointCloud2, self.points_callback, queue_size=1, buff_size=2 ** 24,
-                         tcp_nodelay=True)
+        rospy.Subscriber('points_filtered', PointCloud2, self.points_callback, queue_size=1, buff_size=2 ** 24, tcp_nodelay=True)
 
     def points_callback(self, msg):
         data = numpify(msg)
@@ -49,8 +48,9 @@ class PointsClusterer:
 
         # publish clustered points message
         cluster_msg = msgify(PointCloud2, data)
-        cluster_msg.header = msg.header
-        # self.points_pub.publish(cluster_msg)
+        cluster_msg.header.stamp = msg.header.stamp
+        cluster_msg.header.frame_id = msg.header.frame_id
+        self.cluster_msg_pub.publish(cluster_msg)
 
     def run(self):
         rospy.spin()
