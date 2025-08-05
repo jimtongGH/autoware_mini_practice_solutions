@@ -51,33 +51,54 @@ class CollisionPointsManager:
             detected_objects = self.detected_objects
         collision_points = np.array([], dtype=DTYPE)
 
-        if msg or detected_objects is None or len(detected_objects) == 0:
-            empty_msg = msgify(PointCloud2, np.array([], dtype=DTYPE))
-            empty_msg.header = msg.header
-            self.local_path_collision_pub.publish(empty_msg)
+        if not msg.waypoints:
+            collision_points_msg = msgify(PointCloud2, collision_points)
+            collision_points_msg.header = msg.header
+            self.local_path_collision_pub.publish(collision_points_msg)
             return
 
-        local_path_line = shapely.LineString(msg.waypoints)
-        local_path_buffer = local_path_line.buffer(self.safety_box_width / 2, cap_style='flat')
+        if detected_objects is None or len(detected_objects) == 0:
+            collision_points_msg = msgify(PointCloud2, collision_points)
+            collision_points_msg.header = msg.header
+            self.local_path_collision_pub.publish(collision_points_msg)
+            return
+
+        path_coordinates = [(waypoint.position.x, waypoint.position.y) for waypoint in msg.waypoints]
+        local_path_linestring = shapely.LineString(path_coordinates)
+
+        local_path_buffer = local_path_linestring.buffer(self.safety_box_width / 2, cap_style='flat')
         shapely.prepare(local_path_buffer)
 
         for obj in detected_objects:
-            intersection_points = shapely.Polygon(obj.polygon.points)
+            if hasattr(obj, 'convex_hull') and len(obj.convex_hull) >= 6:
+                hull_points = []
+                for i in range(0, len(obj.convex_hull), 3):
+                    if i + 1 < len(obj.convex_hull):
+                        hull_points.append((obj.convex_hull[i], obj.convex_hull[i + 1]))
 
-            if local_path_buffer.intersects(intersection_points):
-                collision_points = np.append(collision_points, np.array([waypoints.position.x, waypoints.position.y, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                                                         obj.category] for waypoints in msg.waypoints), axis=0)
+                if len(hull_points) >= 3:
+                    object_polygon = shapely.Polygon(hull_points)
 
-            for x, y in intersection_points:
-                collision_points = np.append(collision_points, np.array(
-                    [(x, y, obj.centroid.z, obj.velocity.x, obj.velocity.y, obj.velocity.z,
-                      self.braking_safety_distance_obstacle, np.inf,
-                      3 if obj.speed < self.stopped_speed_limit else 4)], dtype=DTYPE))
+                    if local_path_buffer.intersects(object_polygon):
+                        intersection = local_path_buffer.intersection(object_polygon)
 
-            collision_msg = msgify(PointCloud2, collision_points)
-            collision_msg.header = msg.header
-            self.local_path_collision_pub.publish(collision_msg)
-            rospy.loginfo(collision_points)
+                        intersection_points = shapely.get_coordinates(intersection)
+
+                        object_speed = math.sqrt(obj.velocity.x ** 2 + obj.velocity.y ** 2)
+
+                        for x, y in intersection_points:
+                            collision_points = np.append(collision_points, np.array(
+                                [(x, y, obj.centroid.z, obj.velocity.x, obj.velocity.y, obj.velocity.z,
+                                  self.braking_safety_distance_obstacle, np.inf,
+                                  3 if object_speed < self.stopped_speed_limit else 4)], dtype=DTYPE))
+
+        print("Collision points found:", len(collision_points))
+        for point in collision_points:
+            print([f'{field}: {point[field]}' for field in DTYPE.names])
+
+        collision_points_msg = msgify(PointCloud2, collision_points)
+        collision_points_msg.header = msg.header
+        self.local_path_collision_pub.publish(collision_points_msg)
 
     def run(self):
         rospy.spin()
