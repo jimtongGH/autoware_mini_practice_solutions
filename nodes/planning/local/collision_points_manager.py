@@ -51,40 +51,33 @@ class CollisionPointsManager:
             detected_objects = self.detected_objects
         collision_points = np.array([], dtype=DTYPE)
 
-        print(msg.waypoints)
-        local_path_line = shapely.LineString(msg.waypoints)
-
-        if collision_points or local_path_line is None:
+        if msg or detected_objects is None or len(detected_objects) == 0:
             empty_msg = msgify(PointCloud2, np.array([], dtype=DTYPE))
             empty_msg.header = msg.header
             self.local_path_collision_pub.publish(empty_msg)
             return
-        else:
-            local_path_buffer = local_path_line.buffer(self.safety_box_width / 2, cap_style='flat')
-            prepared_buffer = shapely.prepare(local_path_buffer)
 
-            for obj in detected_objects:
-                hull_xy = [(p.x, p.y) for p in obj.convex_hull]
+        local_path_line = shapely.LineString(msg.waypoints)
+        local_path_buffer = local_path_line.buffer(self.safety_box_width / 2, cap_style='flat')
+        shapely.prepare(local_path_buffer)
 
-                obj_polygon = shapely.Polygon(hull_xy)
-                if not prepared_buffer.intersects(obj_polygon):
-                    continue
+        for obj in detected_objects:
+            intersection_points = shapely.Polygon(obj.polygon.points)
 
-                intersection = local_path_buffer.intersection(obj_polygon)
-                intersection_points = shapely.get_coordinates(intersection)
-                object_speed = math.hypot(obj.velocity.x, obj.velocity.y)
+            if local_path_buffer.intersects(intersection_points):
+                collision_points = np.append(collision_points, np.array([waypoints.position.x, waypoints.position.y, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                                                         obj.category] for waypoints in msg.waypoints), axis=0)
 
-
-                for x, y in intersection_points:
-                    collision_points = np.append(collision_points, np.array(
-                        [(x, y, obj.centroid.z, obj.velocity.x, obj.velocity.y, obj.velocity.z,
-                          self.braking_safety_distance_obstacle, np.inf,
-                          3 if object_speed < self.stopped_speed_limit else 4)], dtype=DTYPE))
+            for x, y in intersection_points:
+                collision_points = np.append(collision_points, np.array(
+                    [(x, y, obj.centroid.z, obj.velocity.x, obj.velocity.y, obj.velocity.z,
+                      self.braking_safety_distance_obstacle, np.inf,
+                      3 if obj.speed < self.stopped_speed_limit else 4)], dtype=DTYPE))
 
             collision_msg = msgify(PointCloud2, collision_points)
             collision_msg.header = msg.header
             self.local_path_collision_pub.publish(collision_msg)
-            rospy.loginfo('%s - The final collision points', collision_points)
+            rospy.loginfo(collision_points)
 
     def run(self):
         rospy.spin()
