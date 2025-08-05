@@ -79,22 +79,20 @@ class LocalPathExtractor:
             local_path = Path()
             local_path.header = current_pose.header
 
-            self.local_path_pub.publish(local_path)
-            return
 
             if global_path_xyz is None:
                 self.local_path_pub.publish(local_path)
                 return
 
             current_position = shapely.Point(
-                current_position.pose.position.x,
-                current_position.pose.position.y
+                current_pose.pose.position.x,
+                current_pose.pose.position.y
             )
 
             ego_distance_from_global_path_start = global_path_linestring.project(current_position)
 
             diffs = np.diff(global_path_xyz[:,:2], axis=0)
-            segment_lengths = np.sqrt(diffs[:, 0] ** 2, diffs[:, 1] ** 2)
+            segment_lengths = np.linalg.norm(diffs, axis=1)
             global_path_distances = np.insert(np.cumsum(segment_lengths), 0, 0.0)
 
             global_path_velocities_interpolator = interp1d(
