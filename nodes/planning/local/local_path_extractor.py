@@ -79,8 +79,6 @@ class LocalPathExtractor:
             local_path = Path()
             local_path.header = current_pose.header
 
-            print('Current pose:', current_pose.pose.position.x, current_pose.pose.position.y,
-                  current_pose.pose.position.z)
             self.local_path_pub.publish(local_path)
             return
 
@@ -88,13 +86,21 @@ class LocalPathExtractor:
                 self.local_path_pub.publish(local_path)
                 return
 
-            current_position = None
+            current_position = shapely.Point(
+                current_position.pose.position.x,
+                current_position.pose.position.y
+            )
 
-            ego_distance_from_global_path_start = None
+            ego_distance_from_global_path_start = global_path_linestring.project(current_position)
 
-            global_path_distances = None
+            diffs = np.diff(global_path_xyz[:,:2], axis=0)
+            segment_lengths = np.sqrt(diffs[:, 0] ** 2, diffs[:, 1] ** 2)
+            global_path_distances = np.insert(np.cumsum(segment_lengths), 0, 0.0)
 
-            global_path_velocities_interpolator = None
+            global_path_velocities_interpolator = interp1d(
+                global_path_distances,
+                global_path_velocities
+            )
 
             # extract local path using distances and velocities interpolator
             local_path_waypoints = self.extract_waypoints(global_path_linestring, global_path_distances,
@@ -104,8 +110,8 @@ class LocalPathExtractor:
             local_path = Path()
             local_path.header = current_pose.header
             local_path.waypoints = local_path_waypoints
-
             self.local_path_pub.publish(local_path)
+
         except Exception as e:
             rospy.logerr_throttle(10, "%s - Exception in callback: %s", rospy.get_name(), traceback.format_exc())
 
