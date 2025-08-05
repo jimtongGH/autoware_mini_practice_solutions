@@ -93,8 +93,6 @@ class CollisionPointsManager:
                                   3 if object_speed < self.stopped_speed_limit else 4)], dtype=DTYPE))
 
         print("Collision points found:", len(collision_points))
-        for point in collision_points:
-            print([f'{field}: {point[field]}' for field in DTYPE.names])
 
         collision_points_msg = msgify(PointCloud2, collision_points)
         collision_points_msg.header = msg.header

@@ -79,7 +79,6 @@ class LocalPathExtractor:
             local_path = Path()
             local_path.header = current_pose.header
 
-
             if global_path_xyz is None:
                 self.local_path_pub.publish(local_path)
                 return
@@ -91,23 +90,28 @@ class LocalPathExtractor:
 
             ego_distance_from_global_path_start = global_path_linestring.project(current_position)
 
-            diffs = np.diff(global_path_xyz[:,:2], axis=0)
+            diffs = np.diff(global_path_xyz[:, :2], axis=0)
             segment_lengths = np.linalg.norm(diffs, axis=1)
             global_path_distances = np.insert(np.cumsum(segment_lengths), 0, 0.0)
 
             global_path_velocities_interpolator = interp1d(
                 global_path_distances,
-                global_path_velocities
+                global_path_velocities,
+                bounds_error=False,
+                fill_value='extrapolate'
             )
 
-            # extract local path using distances and velocities interpolator
-            local_path_waypoints = self.extract_waypoints(global_path_linestring, global_path_distances,
-                                                          ego_distance_from_global_path_start, self.local_path_length,
-                                                          global_path_velocities_interpolator)
+            local_path_waypoints = self.extract_waypoints(
+                global_path_linestring,
+                global_path_distances,
+                ego_distance_from_global_path_start,
+                self.local_path_length,
+                global_path_velocities_interpolator
+            )
 
-            local_path = Path()
-            local_path.header = current_pose.header
-            local_path.waypoints = local_path_waypoints
+            if local_path_waypoints is not None:
+                local_path.waypoints = local_path_waypoints
+
             self.local_path_pub.publish(local_path)
 
         except Exception as e:
