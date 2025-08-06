@@ -63,12 +63,11 @@ class SpeedPlanner:
                 current_speed = self.current_speed
 
             if current_speed is None or current_position is None:
-                rospy.logwarn_throttle(3, "%s - There is No current_speed or current_position here!", rospy.get_name())
+                rospy.logwarn("%s - There is No current_speed or current_position here!", rospy.get_name())
                 return
 
             # no local path or no collision points
             if  len(local_path_msg.waypoints) == 0 or len(collision_points) == 0:
-
                 self.local_path_pub.publish(local_path_msg)
                 return
             
@@ -76,64 +75,64 @@ class SpeedPlanner:
             local_path_coordination = [(wp.position.x, wp.position.y) for wp in local_path_msg.waypoints]
             local_path_linestring = LineString(local_path_coordination)
 
-            min_target_velocity = float('inf')
-            closest_object_distance = float('inf')
-            collision_point_category = 0
+            # min_target_velocity = float('inf')
+            # closest_object_distance = float('inf')
+            # collision_point_category = 0
 
-            collision_point_velocities = []
             collision_point_distances = []
+            collision_point_velocities = []
             collision_point_categories = []
 
-            for cp in collision_points:
-                cp_point = Point(cp['x'], cp['y'])
-                distance_to_cp = local_path_linestring.project(cp_point)
+            for collision_point in collision_points:
+                collision_point_position = Point(collision_point['x'], collision_point['y'])
+                distance_to_cp = local_path_linestring.project(collision_point_position)
 
-                # remove the distance from base link to car nose, and then from car nose considering the distance to stop
-                # in this way the real distance available is smaller than before
-                corrected_distance_to_cp = distance_to_cp - self.distance_to_car_front - cp['distance_to_stop']
+                corrected_distance_to_cp = distance_to_cp - self.distance_to_car_front - collision_point['distance_to_stop']
 
-                # Calculate heading and projected velocity of the object
                 heading = self.get_heading_at_distance(local_path_linestring, distance_to_cp)
-                obj_velocity_vector = Vector3(x=cp['vx'], y=cp['vy'], z=cp['vz'])
-                obj_speed = np.linalg.norm([cp['vx'], cp['vy'], cp['vz']])
+                obj_velocity_vector = Vector3(x=collision_point['vx'], y=collision_point['vy'], z=collision_point['vz'])
+                obj_speed = np.linalg.norm([collision_point['vx'], collision_point['vy'], collision_point['vz']])
                 rel_speed = self.project_vector_to_heading(heading, obj_velocity_vector)
 
-                rospy.loginfo("Object actual speed: %.3f m/s, relative speed along heading: %.3f m/s", obj_speed, rel_speed)
+                rospy.loginfo("Object real speed: %.3f m/s, relative speed: %.3f m/s", obj_speed, rel_speed)
 
                 collision_point_distances.append(corrected_distance_to_cp)
                 collision_point_velocities.append(rel_speed)
-                collision_point_categories.append(cp['category'])
+                collision_point_categories.append(collision_point['category'])
             
             collision_point_distances = np.array(collision_point_distances)
             collision_point_velocities = np.array(collision_point_velocities)
             collision_point_categories = np.array(collision_point_categories)
 
+            # the distance
             target_distances = collision_point_distances - self.braking_reaction_time * np.abs(collision_point_velocities)
-            target_distances = np.maximum(0, target_distances)  
+            # keep choosing max value
+            target_distances = np.maximum(0, target_distances)
 
             positive_velocities = np.maximum(0, collision_point_velocities)
 
+            # the target_velocity
             target_velocities = np.sqrt(np.square(positive_velocities) + 2 * self.default_deceleration * target_distances)
 
-            min_index = np.argmin(target_velocities)
-            min_target_velocity = target_velocities[min_index]
-            closest_object_distance = collision_point_distances[min_index] + self.distance_to_car_front
-            closest_object_velocity = collision_point_velocities[min_index]
-            collision_point_category = collision_point_categories[min_index]
-            stopping_point_distance = closest_object_distance 
+            min_velocity_index = np.argmin(target_velocities)
+            min_target_velocity = target_velocities[min_velocity_index]
 
+            closest_object_distance = collision_point_distances[min_velocity_index] + self.distance_to_car_front
+            closest_object_velocity = collision_point_velocities[min_velocity_index]
+            collision_point_category = collision_point_categories[min_velocity_index]
+            stopping_point_distance = closest_object_distance
 
-            for wp in local_path_msg.waypoints:
-                wp.speed = min(wp.speed, min_target_velocity)
+            for i, wp in enumerate(local_path_msg.waypoints):
+                wp.speed = min(min_target_velocity, wp.speed)
 
-            
+            # Update the lane message with the calculated values
             path = Path()
             path.header = local_path_msg.header
             path.waypoints = local_path_msg.waypoints
-            path.closest_object_distance = closest_object_distance 
-            path.closest_object_velocity = closest_object_velocity 
+            path.closest_object_distance = closest_object_distance
+            path.closest_object_velocity = closest_object_velocity
             path.is_blocked = True
-            path.stopping_point_distance = stopping_point_distance 
+            path.stopping_point_distance = stopping_point_distance
             path.collision_point_category = collision_point_category
             self.local_path_pub.publish(path)
 
