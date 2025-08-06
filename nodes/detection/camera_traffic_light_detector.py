@@ -153,9 +153,27 @@ class CameraTrafficLightDetector:
                 rospy.Duration(self.transform_timeout)
             )
             rois = self.calculate_roi_coordinates(stoplines_on_path, transform)
-            print('rois', rois)
 
-        self.publish_roi_images(image, rois, [], [], camera_image_msg.header.stamp)
+        classes = []
+        scores = []
+        if len(rois) > 0:
+            roi_images = self.create_roi_images(image, rois)
+
+            # run model and do prediction
+            predictions = self.model.run(None, {'conv2d_1_input': roi_images})[0]
+
+            print(f"predictions: {predictions}")
+
+            for prediction in predictions:
+                class_id = np.argmax(prediction)
+                score = np.max(prediction)
+                classes.append(class_id)
+                scores.append(score)
+        else:
+            classes = []
+            scores = []
+
+        self.publish_roi_images(image, rois, classes, scores, camera_image_msg.header.stamp)
 
 
     def calculate_roi_coordinates(self, stoplines_on_path, transform):
@@ -203,7 +221,15 @@ class CameraTrafficLightDetector:
         return rois
 
     def create_roi_images(self, image, rois):
-        pass
+        roi_images = []
+        for _, _, min_u, max_u, min_v, max_v in rois:
+            roi_image = image[min_v:max_v, min_u:max_u]
+
+            roi_image_resized = cv2.resize(roi_image, (128, 128), interpolation=cv2.INTER_LINEAR)
+
+            roi_images.append(roi_image_resized.astype(np.float32))
+
+        return np.stack(roi_images, axis=0) / 255.0
 
     def publish_roi_images(self, image, rois, classes, scores, image_time_stamp):
 
