@@ -43,7 +43,6 @@ class Localizer:
 
         position_x = self.latitude - self.origin_x
         position_y = self.longitude - self.origin_y
-        print('x: ', position_x, 'y: ', position_y)
 
         # calculate azimuth correction
         azimuth_correction = self.utm_projection.get_factors(msg.longitude, msg.latitude).meridian_convergence
@@ -69,8 +68,6 @@ class Localizer:
         # Convert yaw to quaternion
         x, y, z, w = quaternion_from_euler(0, 0, yaw)
         orientation = Quaternion(x, y, z, w)
-
-        print('orientation: ', orientation)
 
         # publish current pose
         current_pose_msg = PoseStamped()
