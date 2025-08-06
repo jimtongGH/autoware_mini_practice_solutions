@@ -63,11 +63,12 @@ class SpeedPlanner:
                 current_speed = self.current_speed
 
             if current_speed is None or current_position is None:
-                rospy.logwarn_throttle(3, "%s - current speed or position not received!", rospy.get_name())
+                rospy.logwarn_throttle(3, "%s - There is No current_speed or current_position here!", rospy.get_name())
                 return
 
+            # no local path or no collision points
             if  len(local_path_msg.waypoints) == 0 or len(collision_points) == 0:
-                # no local path or no collision points menas no alterations to the path
+
                 self.local_path_pub.publish(local_path_msg)
                 return
             
@@ -135,8 +136,6 @@ class SpeedPlanner:
             path.stopping_point_distance = stopping_point_distance 
             path.collision_point_category = collision_point_category
             self.local_path_pub.publish(path)
-
-
 
         except Exception as e:
             rospy.logerr_throttle(10, "%s - Exception in callback: %s", rospy.get_name(), traceback.format_exc())
