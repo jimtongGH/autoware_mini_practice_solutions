@@ -73,8 +73,8 @@ class SpeedPlanner:
                 return
             
 
-            local_path_coords = [(wp.position.x, wp.position.y) for wp in local_path_msg.waypoints]
-            local_path_linestring = LineString(local_path_coords)
+            local_path_coordination = [(wp.position.x, wp.position.y) for wp in local_path_msg.waypoints]
+            local_path_linestring = LineString(local_path_coordination)
 
             min_target_velocity = float('inf')
             closest_object_distance = float('inf')
