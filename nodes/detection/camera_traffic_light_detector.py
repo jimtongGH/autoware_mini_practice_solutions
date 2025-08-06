@@ -1,4 +1,4 @@
-# !/usr/bin/env python3
+#!/usr/bin/env python3
 
 import rospy
 import numpy as np
@@ -112,6 +112,14 @@ class CameraTrafficLightDetector:
             self.stoplines_on_path = stoplines_on_path
             self.transform_from_frame = local_path_msg.header.frame_id
 
+        if self.tfl_stoplines and len(local_path_msg.waypoints) > 0:
+            path_coordinates = [(waypoint.position.x, waypoint.position.y) for waypoint in local_path_msg.waypoints]
+            local_path = LineString(path_coordinates)
+
+            for stoplineId, stopline in self.tfl_stoplines.items():
+                if local_path.intersects(stopline):
+                    stoplines_on_path.append(stoplineId)
+
     def camera_image_callback(self, camera_image_msg):
 
         if self.camera_model is None:
@@ -125,6 +133,20 @@ class CameraTrafficLightDetector:
         with self.lock:
             stoplines_on_path = self.stoplines_on_path
             transform_from_frame = self.transform_from_frame
+
+        traffic_light_result_array = TrafficLightResultArray()
+        traffic_light_result_array.header = camera_image_msg.header
+        self.tfl_status_pub.publish(traffic_light_result_array)
+
+        image = self.bridge.imgmsg_to_cv2(camera_image_msg, desired_encoding='rgb8')
+
+        if self.rectify_image:
+            self.camera_model.rectifyimage(image, image)
+
+        self.publish_roi_images(image, [], [], [], camera_image_msg.header.stamp)
+
+        print(stoplines_on_path)
+
 
     def calculate_roi_coordinates(self, stoplines_on_path, transform):
         pass
@@ -210,3 +232,8 @@ def get_stoplines_trafficlights(lanelet2_map):
                 signals.setdefault(linkId, {}).setdefault(plId, traffic_light_data)
 
     return signals
+
+if __name__ == '__main__':
+    rospy.init_node('camera_traffic_light_detector', log_level=rospy.INFO)
+    node = CameraTrafficLightDetector()
+    node.run()
