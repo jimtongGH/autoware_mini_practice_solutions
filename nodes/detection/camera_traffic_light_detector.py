@@ -169,10 +169,20 @@ class CameraTrafficLightDetector:
                 score = np.max(prediction)
                 classes.append(class_id)
                 scores.append(score)
+
+            for cl, score, (stoplineId, plId, _, _, _, _) in zip(classes, scores, rois):
+                tfl_result = TrafficLightResult()
+                tfl_result.light_id = plId
+                tfl_result.stopline_id = stoplineId
+                tfl_result.recognition_result = CLASSIFIER_RESULT_TO_TLRESULT[cl]
+                tfl_result.recognition_result_str = CLASSIFIER_RESULT_TO_STRING[cl]
+
+                traffic_light_result_array.results.append(tfl_result)
         else:
             classes = []
             scores = []
 
+        self.tfl_status_pub.publish(traffic_light_result_array)
         self.publish_roi_images(image, rois, classes, scores, camera_image_msg.header.stamp)
 
 
