@@ -75,10 +75,6 @@ class SpeedPlanner:
             local_path_coordination = [(wp.position.x, wp.position.y) for wp in local_path_msg.waypoints]
             local_path_linestring = LineString(local_path_coordination)
 
-            # min_target_velocity = float('inf')
-            # closest_object_distance = float('inf')
-            # collision_point_category = 0
-
             collision_point_distances = []
             collision_point_velocities = []
             collision_point_categories = []
@@ -91,7 +87,7 @@ class SpeedPlanner:
 
                 heading = self.get_heading_at_distance(local_path_linestring, distance_to_cp)
                 obj_velocity_vector = Vector3(x=collision_point['vx'], y=collision_point['vy'], z=collision_point['vz'])
-                obj_speed = np.linalg.norm([collision_point['vx'], collision_point['vy'], collision_point['vz']])
+                # obj_speed = np.linalg.norm([collision_point['vx'], collision_point['vy'], collision_point['vz']])
                 rel_speed = self.project_vector_to_heading(heading, obj_velocity_vector)
 
                 # print('Object actual velocity: ', obj_speed, 'relative velocity: ', rel_speed)
@@ -110,6 +106,7 @@ class SpeedPlanner:
             target_distances = np.maximum(0, target_distances)
 
             positive_velocities = np.maximum(0, collision_point_velocities)
+
 
             # the target_velocity
             target_velocities = np.sqrt(np.square(positive_velocities) + 2 * self.default_deceleration * target_distances)
