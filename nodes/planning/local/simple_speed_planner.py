@@ -94,7 +94,7 @@ class SpeedPlanner:
                 obj_speed = np.linalg.norm([collision_point['vx'], collision_point['vy'], collision_point['vz']])
                 rel_speed = self.project_vector_to_heading(heading, obj_velocity_vector)
 
-                rospy.loginfo("Object real speed: %.3f m/s, relative speed: %.3f m/s", obj_speed, rel_speed)
+                rospy.loginfo("Object's actual speed: %.3f m/s, relative speed: %.3f m/s", obj_speed, rel_speed)
 
                 collision_point_distances.append(corrected_distance_to_cp)
                 collision_point_velocities.append(rel_speed)
