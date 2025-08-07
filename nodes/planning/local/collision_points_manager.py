@@ -11,7 +11,6 @@ from sensor_msgs.msg import PointCloud2
 
 from lanelet2.io import Origin, load
 from lanelet2.projection import UtmProjector
-from autoware_mini.msg import TrafficLightResultArray
 
 DTYPE = np.dtype([
     ('x', np.float32),
@@ -50,7 +49,7 @@ class CollisionPointsManager:
 
         # subscribers
         rospy.Subscriber('extracted_local_path', Path, self.path_callback, queue_size=1, tcp_nodelay=True)
-        rospy.Subscriber('extracted_global_path', Path, self.global_path_callback, queue_size=1, tcp_nodelay=True)
+        rospy.Subscriber('global_path', Path, self.global_path_callback, queue_size=1, tcp_nodelay=True)
         rospy.Subscriber('/detection/final_objects', DetectedObjectArray, self.detected_objects_callback, queue_size=1, buff_size=2**20, tcp_nodelay=True)
         rospy.Subscriber('/detection/traffic_light_status', TrafficLightResultArray, self.traffic_light_status_callback,
                          queue_size=1, tcp_nodelay=True)
@@ -137,10 +136,7 @@ class CollisionPointsManager:
         if self.goal_waypoint is not None:
             goal_point = shapely.Point(self.goal_waypoint.position.x, self.goal_waypoint.position.y)
             goal_buffer = goal_point.buffer(0.5)  # Small buffer around goal point
-            print('1')
-
             if goal_buffer.intersects(local_path_buffer):
-                print('2')
                 collision_points = np.append(collision_points, np.array(
                     [(goal_point.x, goal_point.y, self.goal_waypoint.position.z,
                       0.0, 0.0, 0.0,  # No velocity for goal point
@@ -168,8 +164,8 @@ class CollisionPointsManager:
 
     def traffic_light_status_callback(self, msg):
         stopline_statuses = {}
-        for i in msg.results:
-            stopline_statuses[i.stopline_id] = i.recognition_result
+        for result in msg.results:
+            stopline_statuses[result.stopline_id] = result.recognition_result
 
         self.stopline_statuses = stopline_statuses
 
