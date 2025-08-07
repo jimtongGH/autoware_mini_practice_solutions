@@ -82,7 +82,6 @@ class CollisionPointsManager:
         with self.lock:
             self.goal_waypoint = msg.waypoints[-1]  # Extract last waypoint as goal
 
-
     def detected_objects_callback(self, msg):
         self.detected_objects = msg.objects
 
