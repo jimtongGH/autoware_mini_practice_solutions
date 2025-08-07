@@ -70,8 +70,8 @@ class PurePursuitFollower:
             _, _, heading = euler_from_quaternion([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
             # lookahead point heading calculation
             lookahead_heading = np.arctan2(lookahead_point.y - current_pose.y, lookahead_point.x - current_pose.x)
-            self.lookahead_distance = shapely.distance(current_pose, lookahead_point)
-            steering_angle = np.arctan((2 * self.wheel_base * np.sin(lookahead_heading - heading))/self.lookahead_distance)
+            real_lookahead_distance = shapely.distance(current_pose, lookahead_point)
+            steering_angle = np.arctan((2 * self.wheel_base * np.sin(lookahead_heading - heading))/real_lookahead_distance)
 
             vehicle_cmd = VehicleCmd()
             vehicle_cmd.ctrl_cmd.steering_angle = steering_angle
