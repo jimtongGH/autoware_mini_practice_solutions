@@ -2,6 +2,9 @@
 
 [English](#english-version) | [中文](#中文版本)
 
+## System Architecture 系统架构
+![architecture](architecture.png)
+
 ---
 
 ## English Version
