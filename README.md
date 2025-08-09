@@ -62,7 +62,14 @@ _See `package.xml` and source code comments for more details._
 ---
 
 ### 📂 Directory Structure
-
+nodes/localization/ # Localization nodes
+nodes/planning/global/ # Global path planning
+nodes/planning/local/ # Local trajectory & speed planning
+nodes/detection/ # Perception & clustering
+nodes/control/ # Control algorithms
+config/ # Configurations
+launch/ # Launch files
+rviz/ # RViz visualization configs
 
 
 ---
@@ -125,4 +132,11 @@ _详见 `package.xml` 和各节点源码的依赖注释_
 ---
 
 ### 📂 目录结构
-
+nodes/localization/ # 定位相关节点
+nodes/planning/global/ # 全局路径规划
+nodes/planning/local/ # 局部轨迹与速度规划
+nodes/detection/ # 感知与聚类
+nodes/control/ # 控制算法
+config/ # 配置文件
+launch/ # 启动文件
+rviz/ # RViz 可视化配置
