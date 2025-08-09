@@ -61,15 +61,18 @@ _See `package.xml` and source code comments for more details._
 
 ---
 
-### 📂 Directory Structure
-nodes/localization/ # Localization nodes
-nodes/planning/global/ # Global path planning
-nodes/planning/local/ # Local trajectory & speed planning
-nodes/detection/ # Perception & clustering
-nodes/control/ # Control algorithms
-config/ # Configurations
-launch/ # Launch files
-rviz/ # RViz visualization configs
+### 📂 Project Directory
+```text
+nodes/localization/       # Localization nodes — GNSS processing, UTM conversion, TF broadcasting
+nodes/planning/global/    # Global path planning using Lanelet2 maps
+nodes/planning/local/     # Local trajectory extraction, speed planning, collision point detection
+nodes/detection/          # Perception modules — LiDAR clustering, traffic light detection
+nodes/control/            # Control algorithms — Pure Pursuit, lateral & longitudinal control
+config/                   # Configuration files for modules
+launch/                   # ROS launch files
+rviz/                     # RViz visualization configuration
+```
+
 
 
 ---
@@ -132,11 +135,13 @@ _详见 `package.xml` 和各节点源码的依赖注释_
 ---
 
 ### 📂 目录结构
-nodes/localization/ # 定位相关节点
-nodes/planning/global/ # 全局路径规划
-nodes/planning/local/ # 局部轨迹与速度规划
-nodes/detection/ # 感知与聚类
-nodes/control/ # 控制算法
-config/ # 配置文件
-launch/ # 启动文件
-rviz/ # RViz 可视化配置
+```text
+nodes/localization/       # 定位相关节点 —— GNSS 数据处理、UTM 坐标转换、TF 广播
+nodes/planning/global/    # 全局路径规划 —— 基于 Lanelet2 高精地图
+nodes/planning/local/     # 局部轨迹与速度规划、碰撞点检测
+nodes/detection/          # 感知模块 —— 激光雷达聚类、交通灯检测
+nodes/control/            # 控制算法 —— 纯跟踪、横向与纵向控制
+config/                   # 各模块的配置文件
+launch/                   # ROS 启动文件
+rviz/                     # RViz 可视化配置文件
+```
